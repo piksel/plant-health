@@ -1,0 +1,19 @@
+#ifndef PLANT_HEALTH_FIRMWARE_CONFIG_H
+#define PLANT_HEALTH_FIRMWARE_CONFIG_H
+
+/************************* WiFi Access Point *********************************/
+
+#define WLAN_SSID ""
+#define WLAN_PASS ""
+
+/************************* Adafruit.io Setup *********************************/
+
+#define AIO_SERVER_HOST  "io.adafruit.com"
+#define AIO_SERVER_PORT  8883
+
+// Adafruit IO Account Configuration
+// (to obtain these values, visit https://io.adafruit.com and click on Active Key)
+#define AIO_USERNAME ""
+#define AIO_KEY      ""
+
+#endif //PLANT_HEALTH_FIRMWARE_CONFIG_H
