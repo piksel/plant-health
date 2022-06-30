@@ -4,8 +4,11 @@ void CapProbe::on_update(State *state) {
     auto tempC = _ss.getTemp();
     auto cap = _ss.touchRead(0);
 
-    state->capread = cap;
-    state->tempC = tempC;
+    state->soil_cap = cap;
+    state->soil_temp = tempC;
+
+    log("Temperature: "); log(state->soil_temp); logln("*C");
+    log("Capacitive: "); logln(state->soil_cap);
 }
 
 bool CapProbe::on_init() {
@@ -17,8 +20,4 @@ bool CapProbe::on_init() {
         Serial.println(_ss.getVersion(), HEX);
         return true;
     }
-}
-
-CapProbe::CapProbe(int addr) : Module(1000), _addr{addr} {
-
 }

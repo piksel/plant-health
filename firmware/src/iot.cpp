@@ -61,7 +61,7 @@ void IoT::on_update(State *state) {
         return;
     }
 
-    publish(FEED_CAPACITY, state->capread);
+    publish(FEED_CAPACITY, state->soil_cap);
 
 
 }
