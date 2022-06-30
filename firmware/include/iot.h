@@ -25,6 +25,7 @@ public:
     IoT();
 protected:
     void on_update(State *state) override;
+    bool on_init() override;
 private:
     // WiFiFlientSecure for SSL/TLS support
     WiFiClientSecure _wifi_client;
@@ -35,7 +36,7 @@ private:
             AIO_FEED_PFX "soil_temp",
             AIO_FEED_PFX "soil_floater"
     };
-    Adafruit_MQTT_Publish* feed_publishers[NUM_FEEDS];
+    Adafruit_MQTT_Publish* feed_publishers[NUM_FEEDS]{};
 
     boolean MQTT_connect();
 };

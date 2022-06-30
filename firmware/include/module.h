@@ -32,9 +32,9 @@ protected:
     virtual void on_update(State *state) {}
     virtual bool on_init() {return true;}
     boolean _available;
+    int _retry_frequency = 600000; // 10 minutes
   private:
     int _update_frequency;
-    int _retry_frequency;
     int _last_updated;
     int _last_init;
 };

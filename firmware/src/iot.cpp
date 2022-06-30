@@ -62,11 +62,38 @@ void IoT::on_update(State *state) {
     }
 
     publish(FEED_CAPACITY, state->soil_cap);
-
+    publish(FEED_TEMP, state->soil_temp);
+    publish(FEED_FLOAT, state->floater);
 
 }
 
+bool IoT::on_init() {
+    log("Connecting to "); logln(WLAN_SSID);
 
+    delay(1000);
+    WiFi.disconnect();
+    delay(600);
+    WiFi.begin(WLAN_SSID, WLAN_PASS);
+    delay(2000);
+
+    auto wl_status = WiFiClass::status();
+
+    byte retries = 10;
+    while (wl_status != WL_CONNECTED) {
+        log("Waiting for connection ("); log(retries); log("s left). Status: ");
+        logln(wl_status_name(wl_status));
+
+        delay(1000);
+        wl_status = WiFiClass::status();
+        if (retries-- == 0) return false;
+    }
+    logln();
+
+    logln("WiFi connected!");
+    log("IP address: "); logln(WiFi.localIP());
+
+    return true;
+}
 
 IoT::IoT() : Module(iot_update_freq) {
     // Set Adafruit IO's root CA
@@ -77,30 +104,6 @@ IoT::IoT() : Module(iot_update_freq) {
     for (int i = 0; i < NUM_FEEDS; i++) {
         feed_publishers[i] = new Adafruit_MQTT_Publish(_mqtt, feeds[i]);
     }
-
-
-    log("Connecting to "); logln(WLAN_SSID);
-
-    delay(1000);
-    WiFi.disconnect();
-    delay(600);
-    WiFi.begin(WLAN_SSID, WLAN_PASS);
-    delay(5000);
-
-    auto wl_status = WiFiClass::status();
-
-    while (wl_status != WL_CONNECTED) {
-
-        log("WiFi Status: "); logln(wl_status_name(wl_status));
-        delay(500);
-        wl_status = WiFiClass::status();
-    }
-    logln();
-
-    logln("WiFi connected!");
-    log("IP address: "); logln(WiFi.localIP());
-
-
 }
 
 // Function to connect and reconnect as necessary to the MQTT server.
