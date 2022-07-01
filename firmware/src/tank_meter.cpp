@@ -5,7 +5,7 @@ void TankMeter::on_update(State *state) {
 
     state->floater = digitalRead(_pin);
 
-    log("Floater: "); logln(state->floater);
+    logd("Floater: %d", state->floater);
 }
 
 bool TankMeter::on_init() {

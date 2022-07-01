@@ -42,22 +42,29 @@ const char* wl_status_name(wl_status_t status) {
     }
 }
 
-void log_result(bool success) {
-    if (!success) logln(F("Failed"));
-    else logln(F("OK!"));
-}
 #define publish(f, v) \
-    log(F("Sending val \"")); Serial.print(v); log(F("\" to feed ")); log(feeds[f]); \
-    log_result(feed_publishers[f]->publish(v))
+    logi("Sending val %s to feed %s... %s", iot_fmt(v), feeds[f], feed_publishers[f]->publish(v) ? "OK" : "Failed!")
+
+char iot_value_buf[10];
+char* iot_fmt(uint16_t v) { snprintf(iot_value_buf, 10, "%d",    v); return iot_value_buf; }
+char* iot_fmt(float v)    { snprintf(iot_value_buf, 10, "%2.2f", v); return iot_value_buf; }
+char* iot_fmt(bool v)     { snprintf(iot_value_buf, 10, "%d",    v); return iot_value_buf; }
+
+void IoT::publish_event(eventid_t eventid, State *state) {
+    auto event = (1 << eventid);
+    if (state->events & event) {
+        publish(FEED_EVENT, event_names[eventid]);
+        state->events &= ~event;
+    }
+}
 
 void IoT::on_update(State *state) {
-
 
     // Ensure the connection to the MQTT server is alive (this will make the first
     // connection and automatically reconnect when disconnected).  See the MQTT_connect
     // function definition further below.
     if(!MQTT_connect()) {
-        log("Not connected! Skipping MQTT publishing.");
+        logw("Not connected! Skipping MQTT publishing.");
         return;
     }
 
@@ -65,10 +72,35 @@ void IoT::on_update(State *state) {
     publish(FEED_TEMP, state->soil_temp);
     publish(FEED_FLOAT, state->floater);
 
+    publish_events(state);
+
+
+    delay(1000);
+
+    Adafruit_MQTT_Subscribe *sub;
+    while ((sub = _mqtt->readSubscription(1000))) {
+        if(sub == feed_subcribers[FEED_WTR_TSH]) {
+            state->soil_cap_thresh = strtol((char *)sub->lastread, nullptr, 10);
+            logi("Updated auto watering threshold to %d", state->soil_cap_thresh);
+        }
+        else if(sub == feed_subcribers[FEED_EVENT]) {
+            if (strcmp((char *)sub->lastread, event_names[EVENT_MAN_WATER]) == 0) {
+                logi("Got manual watering event");
+                state->events |= EVENT_MAN_WATER;
+            }
+            else {
+                logw("Got unknown event \"%s\"", sub->lastread);
+            }
+        }
+        else {
+            logw("Got unknown subscription from \"%s\"", sub->topic);
+        }
+    }
+
 }
 
 bool IoT::on_init() {
-    log("Connecting to "); logln(WLAN_SSID);
+    logi("Connecting to %s", WLAN_SSID);
 
     delay(1000);
     WiFi.disconnect();
@@ -80,30 +112,40 @@ bool IoT::on_init() {
 
     byte retries = 10;
     while (wl_status != WL_CONNECTED) {
-        log("Waiting for connection ("); log(retries); log("s left). Status: ");
-        logln(wl_status_name(wl_status));
+        logd("Waiting for connection (%d s left). Status: %s", retries, wl_status_name(wl_status));
 
         delay(1000);
         wl_status = WiFiClass::status();
         if (retries-- == 0) return false;
     }
-    logln();
-
-    logln("WiFi connected!");
-    log("IP address: "); logln(WiFi.localIP());
+    // Add a small delay here to prevent logging issues
+    delay(100);
+    logi("WiFi connected!");
+    logd("IP address: %s", WiFi.localIP().toString().c_str());
 
     return true;
 }
 
-IoT::IoT() : Module(iot_update_freq) {
+IoT::IoT() : Module(iot_update_freq, "IoT") {
+    logd("Setting WiFi cert");
     // Set Adafruit IO's root CA
     _wifi_client.setCACert(adafruitio_root_ca);
 
+    logd("Initializing MQTT Client...");
     _mqtt = new Adafruit_MQTT_Client(&_wifi_client, AIO_SERVER_HOST, AIO_SERVER_PORT, AIO_USERNAME, AIO_KEY);
 
+    logd("Initializing feed publishers...");
     for (int i = 0; i < NUM_FEEDS; i++) {
-        feed_publishers[i] = new Adafruit_MQTT_Publish(_mqtt, feeds[i]);
+        if (feed_modes[i] & FEED_SUBSCRIBE) {
+            feed_subcribers[i] = new Adafruit_MQTT_Subscribe(_mqtt, feeds[i]);
+            _mqtt->subscribe(feed_subcribers[i]);
+        }
+        if (feed_modes[i] & FEED_PUBLISH) {
+            feed_publishers[i] = new Adafruit_MQTT_Publish(_mqtt, feeds[i]);
+        }
     }
+
+    this->init();
 }
 
 // Function to connect and reconnect as necessary to the MQTT server.
@@ -116,12 +158,12 @@ boolean IoT::MQTT_connect() {
         return true;
     }
 
-    Serial.print("Connecting to MQTT... ");
+    logi("Connecting to MQTT... ");
 
     uint8_t retries = 3;
     while ((ret = _mqtt->connect()) != 0) { // connect will return 0 for connected
-        logln(_mqtt->connectErrorString(ret));
-        logln("Retrying MQTT connection in 5 seconds...");
+        logw("Failed to connect to MQTT: %s", _mqtt->connectErrorString(ret));
+        logi("Retrying MQTT connection in 5 seconds...");
         _mqtt->disconnect();
         delay(5000);  // wait 5 seconds
         retries--;
@@ -130,8 +172,17 @@ boolean IoT::MQTT_connect() {
         }
     }
 
-    logln("MQTT Connected!");
+    logi("MQTT Connected!");
 
     return true;
+}
+
+void IoT::publish_events(State *state) {
+    if(!MQTT_connect()) {
+        logw("Not connected! Skipping MQTT publishing.");
+        return;
+    }
+    publish_event(EVENTID_WATER_ON, state);
+    publish_event(EVENTID_WATER_OFF, state);
 }
 

@@ -23,14 +23,9 @@ void FlowMeter::on_update(State *state) {
 
     // TODO: Account for update delays!
     //(Pulse frequency x 60) / 7.5Q, = flow rate
-    state->flow_rate = (_fan_ticks * 60 / 7.5);
+    state->flow_rate = (float)(_fan_ticks * 60 / 7.5);
 
     _fan_ticks = 0;
 
-    log("Flow: ");
-    log(_fan_ticks);
-    log("ticks, ");
-
-    log (state->flow_rate, DEC);
-    logln (" L/hour");
+    logd("Flow: %f2.2 L/hour (%d ticks)", state->flow_rate, _fan_ticks);
 }

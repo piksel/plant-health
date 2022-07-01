@@ -27,11 +27,14 @@ State state;
 
 
 void setup() {
+    const char *_log_tag = "Setup";
     Serial.begin(115200);
 
-    log("Plant Health Controller v"); logln(FIRMWARE_VERSION);
+    logi("Plant Health Controller v%s", FIRMWARE_VERSION);
 
     pinMode(LED_BUILTIN, OUTPUT);
+
+    logd("Initializing Modules...");
 
     iot = new IoT();
     cap_probe = new CapProbe(cap_probe_addr);
@@ -39,10 +42,12 @@ void setup() {
     water_pump = new WaterPump(pump_relay_pin);
     tank_meter = new TankMeter(tank_float_switch_pin);
 
-
+    water_pump->set_iot(iot);
 }
 
 void loop() {
+    const char *_log_tag = "Loop";
+    logd("Start");
 
     // Reading modules
     flow_meter->update(&state);
@@ -53,8 +58,8 @@ void loop() {
     water_pump->update(&state);
     iot->update(&state);
 
-    Serial.println();
-    sleep(1000);
+    logd("End");
+    delay(1000);
 }
 
 

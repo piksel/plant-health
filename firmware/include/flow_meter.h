@@ -5,14 +5,16 @@
 
 class FlowMeter: public Module {
 public:
-    FlowMeter(int pin): Module(1000), _pin{pin} {}
+    FlowMeter(int pin): Module(1000, "FlowMeter"), _pin{pin} {
+        this->init();
+    }
     void tick();
 protected:
     void on_update(State *state) override;
     bool on_init() override;
 private:
     const int _pin;
-    volatile int _fan_ticks;
+    volatile int _fan_ticks = 0;
 };
 
 

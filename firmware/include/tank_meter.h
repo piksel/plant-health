@@ -5,7 +5,9 @@
 
 class TankMeter: public Module {
 public:
-    explicit TankMeter(int pin) : Module(1000), _pin{pin} {}
+    explicit TankMeter(int pin) : Module(1000, "TankMeter"), _pin{pin} {
+        this->init();
+    }
 protected:
     void on_update(State *state) override;
     bool on_init() override;
